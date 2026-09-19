@@ -7,10 +7,13 @@ Uso:
 """
 
 import argparse
+import logging
 import os
 
 from modules.utils import banner, validar_ip, Carpeta
-from modules import nmap_scan, web, services, hostnames as hn, reporting, vuln_correlation
+from modules import nmap_scan, web, services, hostnames as hn, reporting, vuln_correlation, misconfig
+
+VERSION = "1.0.0"
 
 
 SUBFOLDERS = [
@@ -24,6 +27,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Framework de reconocimiento modular (HTB/eJPT)."
     )
+    parser.add_argument("--version", action="version", version=f"recon.py {VERSION}")
     parser.add_argument("ip", help="Dirección IP del objetivo")
     parser.add_argument("-n", "--nombre", help="Nombre de la carpeta del workspace", required=False)
     parser.add_argument("--deep", action="store_true",
@@ -35,10 +39,10 @@ def parse_args():
 
 
 def main():
+    args = parse_args()
+
     os.system("cls" if os.name == "nt" else "clear")
     banner()
-
-    args = parse_args()
 
     if not validar_ip(args.ip):
         return
@@ -46,6 +50,13 @@ def main():
     nombre_carpeta = args.nombre or args.ip
     carpeta = Carpeta(nombre_carpeta)
     carpeta.crear_carpeta(SUBFOLDERS)
+
+    logging.basicConfig(
+        filename=carpeta.nombre / "recon.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    logging.info(f"recon.py {VERSION} iniciado contra {args.ip} (deep={args.deep})")
 
     ip = args.ip
 
@@ -62,8 +73,7 @@ def main():
     nmap_scan.escanear_puertos_personalizados(ip, carpeta.nombre, puertos)
 
     # 4. UDP
-    nmap_scan.escanear_udp(ip, carpeta.nombre, deep=args.deep)
-    puertos_udp = []  # placeholder: extraer de output si se necesita más adelante
+    puertos_udp = nmap_scan.escanear_udp(ip, carpeta.nombre, deep=args.deep)
 
     # 5. OS detection
     nmap_scan.detectar_os(ip, carpeta.nombre)
@@ -92,6 +102,7 @@ def main():
         nmap_scan.nse_vuln(ip, carpeta.nombre, puertos)
 
     vuln_correlation.correlacionar_vulnerabilidades(carpeta.nombre, urls=urls, deep=args.deep)
+    misconfig.buscar_archivos_interesantes(urls, carpeta.nombre)
 
     # 10. Hostnames
     hostnames_encontrados = hn.extraer_hostnames(carpeta.nombre)
@@ -106,8 +117,12 @@ def main():
     print("\n[+] Recon completado.")
     print(f"[+] Workspace: {carpeta.nombre}")
     print(f"[+] TCP: {','.join(map(str, puertos))}")
+    if puertos_udp:
+        print(f"[+] UDP: {','.join(map(str, puertos_udp))}")
     if hostnames_encontrados:
         print(f"[+] Hostnames: {', '.join(hostnames_encontrados)}")
+
+    logging.info("Recon completado correctamente.")
 
 
 if __name__ == "__main__":

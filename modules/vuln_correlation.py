@@ -128,12 +128,32 @@ def consultar_nvd(product, version, max_resultados=5):
         "resultsPerPage": max_resultados,
     }
 
-    try:
-        resp = requests.get(NVD_API, params=params, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        print(colored(f"[!] Error consultando NVD para '{keyword}': {e}", "yellow"))
+    data = None
+    intentos = 3
+
+    for intento in range(1, intentos + 1):
+        try:
+            resp = requests.get(NVD_API, params=params, timeout=15)
+
+            if resp.status_code == 429:
+                espera = NVD_DELAY * intento * 2
+                print(colored(
+                    f"[!] NVD rate-limit (429). Reintentando en {espera}s "
+                    f"({intento}/{intentos})...", "yellow"
+                ))
+                time.sleep(espera)
+                continue
+
+            resp.raise_for_status()
+            data = resp.json()
+            break
+
+        except Exception as e:
+            print(colored(f"[!] Error consultando NVD para '{keyword}': {e}", "yellow"))
+            return []
+
+    if data is None:
+        print(colored(f"[!] NVD siguió con rate-limit tras {intentos} intentos, se omite '{keyword}'.", "red"))
         return []
 
     resultados = []

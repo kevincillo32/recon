@@ -68,11 +68,36 @@ def escanear_puertos_personalizados(ip, folder, puertos):
 def escanear_udp(ip, folder, deep=False):
     top = "1000" if deep else "100"
     output = folder / "03_nmap" / f"udpTop{top}"
+    grepable = folder / "03_nmap" / f"udpTop{top}.gnmap"
 
     run_command([
-        "nmap", "-sU", "--top-ports", top, "-Pn", "-n", ip, "-oN", str(output)
+        "nmap", "-sU", "--top-ports", top, "-Pn", "-n", ip,
+        "-oN", str(output), "-oG", str(grepable)
     ])
     print(colored(f"[+] UDP Top {top} guardado en {output}", "green"))
+
+    return extraer_puertos_udp(grepable)
+
+
+def extraer_puertos_udp(nmap_grepable_file):
+    """
+    UDP suele reportar 'open|filtered' en vez de 'open' a secas cuando no
+    hay -sV, así que se necesita una regex distinta a la de TCP.
+    """
+    if not nmap_grepable_file.exists():
+        return []
+
+    contenido = nmap_grepable_file.read_text(encoding="utf-8", errors="ignore")
+    puertos = sorted(set(
+        int(p) for p in re.findall(r"(\d+)/open(?:\|filtered)?/udp", contenido)
+    ))
+
+    if puertos:
+        print(colored(f"[+] Puertos UDP (open/open|filtered): {puertos}", "green"))
+    else:
+        print(colored("[!] No se encontraron puertos UDP abiertos/filtrados.", "yellow"))
+
+    return puertos
 
 
 def detectar_os(ip, folder):

@@ -4,6 +4,7 @@
 from termcolor import colored
 
 from modules.utils import run_command, tool_exists
+from modules.config_loader import CONFIG
 
 WEB_PORTS = {80, 81, 443, 591, 593, 800, 801, 8080, 8081, 8088, 8443, 8888, 9000, 9090, 9443}
 TLS_PORTS = {443, 465, 636, 853, 989, 990, 992, 993, 995, 8443}
@@ -35,19 +36,25 @@ def http_recon(ip, folder, puertos):
 
         # Directory enumeration básico (wordlist común primero)
         if tool_exists("gobuster"):
+            wordlist = CONFIG.get("wordlists", "dir_common")
+            threads = CONFIG.get("web", "gobuster_threads")
+            dir_output = port_folder / "directories.txt"
+
             run_command([
                 "gobuster", "dir", "-u", url,
-                "-w", "/usr/share/wordlists/dirb/common.txt",
-                "-q", "-t", "50"
-            ], port_folder / "directories.txt")
+                "-w", wordlist,
+                "-q", "-t", threads
+            ], dir_output)
 
     return urls
 
 
-def vhost_fuzz(ip, folder, hostname_base, wordlist="/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt"):
+def vhost_fuzz(ip, folder, hostname_base, wordlist=None):
     """Fuzzing de vhosts si se conoce un dominio base (ej. target.htb)."""
     if not hostname_base or not tool_exists("ffuf"):
         return
+
+    wordlist = wordlist or CONFIG.get("wordlists", "subdomains")
 
     output = folder / "04_web" / "vhosts.txt"
     output.parent.mkdir(parents=True, exist_ok=True)
