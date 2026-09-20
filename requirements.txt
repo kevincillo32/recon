@@ -1,3 +1,14 @@
 termcolor
 pyperclip
 requests
+charset_normalizer
+flask
+pyyaml
+
+# Opcional: mejora el análisis del grafo de ataque (centralidad de nodos)
+# y permite generar la versión estática (PNG) para el reporte PDF.
+networkx
+matplotlib
+
+# Requerido solo para --pdf-report
+reportlab

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Genera README.md y attack-surface.md a partir de los resultados de recon."""
 
-from termcolor import colored
+try:
+    from termcolor import colored
+except ImportError:
+    from modules._vendor_termcolor import colored
 
 SERVICE_NAMES = {
     21: "FTP", 22: "SSH", 25: "SMTP", 53: "DNS", 80: "HTTP",

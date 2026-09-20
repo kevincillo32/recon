@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Módulos de enumeración por servicio: SMB, FTP, DNS, SNMP, LDAP, SMTP, DBs."""
 
-from termcolor import colored
+try:
+    from termcolor import colored
+except ImportError:
+    from modules._vendor_termcolor import colored
 
 from modules.utils import run_command, tool_exists
 

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recon-htb"
+version = "4.0.1"
+description = "Framework de reconocimiento modular open source para hackers éticos (HTB, eJPT, labs autorizados)."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "termcolor",
+    "pyperclip",
+    "requests",
+    "flask",
+]
+
+[project.optional-dependencies]
+graph = ["networkx"]
+full = ["networkx", "flask"]
+
+[project.scripts]
+recon = "recon:main"
+recon-note = "recon_note:main"
+recon-postexploit = "recon_postexploit:main"
+
+[project.urls]
+Homepage = "https://github.com/xX-DarthBear-Xx/recon"
+
+[tool.setuptools]
+py-modules = ["recon", "recon_note", "recon_postexploit", "dashboard", "team_server", "pattern_analysis", "update_resources"]
+packages = ["modules", "modules.custom"]
+
+[tool.setuptools.package-data]
+"config" = ["*.conf"]
+
+

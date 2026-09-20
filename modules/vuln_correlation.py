@@ -22,7 +22,10 @@ import re
 import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from termcolor import colored
+try:
+    from termcolor import colored
+except ImportError:
+    from modules._vendor_termcolor import colored
 
 try:
     import requests
@@ -325,6 +328,18 @@ def correlacionar_vulnerabilidades(folder, urls=None, deep=False):
 # ============================================================
 # 7. SALIDA: findings.json y findings.md
 # ============================================================
+
+def _leer_findings_existentes(folder):
+    """Lee findings.json ya generado en una corrida previa (usado por --resume)."""
+    findings_path = Path(folder) / "06_vulnerabilities" / "findings.json"
+    if not findings_path.exists():
+        return []
+    try:
+        data = json.loads(findings_path.read_text(encoding="utf-8"))
+        return data.get("findings", [])
+    except Exception:
+        return []
+
 
 def escribir_findings_json(folder, findings):
     output = folder / "06_vulnerabilities" / "findings.json"

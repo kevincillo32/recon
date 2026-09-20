@@ -1,0 +1,11 @@
+id: django-debug-page
+info:
+  name: Django DEBUG=True page
+  severity: high
+request:
+  path: /nonexistent-path-for-django-debug-trigger
+  method: GET
+matchers:
+  - type: word
+    words: ["DisallowedHost", "Django Version", "Exception Type"]
+    condition: or

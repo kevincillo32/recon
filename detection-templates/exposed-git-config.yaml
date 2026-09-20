@@ -1,0 +1,13 @@
+id: exposed-git-config
+info:
+  name: Exposed .git/config
+  severity: medium
+request:
+  path: /.git/config
+  method: GET
+matchers:
+  - type: status
+    status: [200]
+  - type: word
+    words: ["[core]", "repositoryformatversion"]
+    condition: or

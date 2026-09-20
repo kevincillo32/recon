@@ -2,7 +2,10 @@
 """Extracción de hostnames a partir de los outputs de recon y gestión de /etc/hosts."""
 
 import re
-from termcolor import colored
+try:
+    from termcolor import colored
+except ImportError:
+    from modules._vendor_termcolor import colored
 
 PATRONES = [
     r"(?i)(?:hostname|host|server|domain|fqdn)"
@@ -15,6 +18,26 @@ PATRONES = [
 # Dominios genéricos que casi siempre son ruido (falsos positivos de webs públicas,
 # ejemplos en banners, etc.) y no aportan como hostname de la máquina objetivo.
 DOMINIOS_RUIDO = (".com", ".org", ".net", ".gov", ".edu")
+
+
+def extraer_de_texto(contenido):
+    """Aplica los patrones de hostname sobre un string suelto (no archivo).
+    Reutilizado tanto por extraer_hostnames() como por la sonda rápida
+    de web.py antes del recon pesado."""
+    encontrados = set()
+
+    for patron in PATRONES:
+        for hostname in re.findall(patron, contenido):
+            hostname = hostname.strip(".,:;()[]{}<>\"'").lower()
+
+            if not hostname:
+                continue
+            if hostname.endswith(".htb"):
+                encontrados.add(hostname)
+            elif not hostname.endswith(DOMINIOS_RUIDO):
+                encontrados.add(hostname)
+
+    return encontrados
 
 
 def extraer_hostnames(folder):
@@ -31,27 +54,17 @@ def extraer_hostnames(folder):
         except Exception:
             continue
 
-        for patron in PATRONES:
-            for hostname in re.findall(patron, contenido):
-                hostname = hostname.strip(".,:;()[]{}<>\"'").lower()
-
-                # Bug corregido: antes la condición usaba `or` y dejaba pasar
-                # casi cualquier hostname. Ahora se descarta explícitamente
-                # el ruido de dominios públicos genéricos, salvo que sea .htb
-                # (que siempre interesa en HTB).
-                if not hostname:
-                    continue
-                if hostname.endswith(".htb"):
-                    encontrados.add(hostname)
-                elif not hostname.endswith(DOMINIOS_RUIDO):
-                    encontrados.add(hostname)
+        encontrados |= extraer_de_texto(contenido)
 
     return sorted(encontrados)
 
 
 def agregar_hosts(ip, hostnames, auto_confirm=False):
+    """Devuelve la lista de hostnames que quedaron efectivamente
+    resueltos en /etc/hosts (ya existían o se acaban de agregar), para
+    que el llamador sepa cuáles puede usar de forma confiable como URL."""
     if not hostnames:
-        return
+        return []
 
     print(colored("\n[+] Hostnames encontrados:", "green"))
     for hostname in hostnames:
@@ -62,8 +75,9 @@ def agregar_hosts(ip, hostnames, auto_confirm=False):
             lines = f.readlines()
     except PermissionError:
         print(colored("[!] Se necesitan permisos para leer /etc/hosts.", "red"))
-        return
+        return []
 
+    ya_resueltos = []
     nuevas = []
     for hostname in hostnames:
         existe = any(
@@ -72,11 +86,12 @@ def agregar_hosts(ip, hostnames, auto_confirm=False):
         )
         if existe:
             print(colored(f"[=] Ya existe: {hostname}", "yellow"))
+            ya_resueltos.append(hostname)
         else:
             nuevas.append(hostname)
 
     if not nuevas:
-        return
+        return ya_resueltos
 
     print(colored("\n[+] Hostnames que serán agregados:", "cyan"))
     for hostname in nuevas:
@@ -86,7 +101,7 @@ def agregar_hosts(ip, hostnames, auto_confirm=False):
         respuesta = input("\n¿Agregar a /etc/hosts? [Y/n]: ").strip().lower()
         if respuesta not in ("", "y", "yes", "s", "si"):
             print(colored("[!] No se modificó /etc/hosts.", "yellow"))
-            return
+            return ya_resueltos
 
     try:
         with open("/etc/hosts", "a", encoding="utf-8") as f:
@@ -94,6 +109,8 @@ def agregar_hosts(ip, hostnames, auto_confirm=False):
             for hostname in nuevas:
                 f.write(f"{ip}\t{hostname}\n")
         print(colored("[+] /etc/hosts actualizado.", "green"))
+        return ya_resueltos + nuevas
     except PermissionError:
         print(colored("[!] No tienes permisos de escritura.", "red"))
         print(colored("[!] Ejecuta el script con sudo o agrega las entradas manualmente.", "yellow"))
+        return ya_resueltos

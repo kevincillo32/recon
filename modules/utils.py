@@ -6,7 +6,10 @@ import subprocess
 import ipaddress
 from pathlib import Path
 
-from termcolor import colored
+try:
+    from termcolor import colored
+except ImportError:
+    from modules._vendor_termcolor import colored
 
 
 def banner():

@@ -7,7 +7,10 @@ a rutas conocidas y reporta el status code.
 
 import requests
 import urllib3
-from termcolor import colored
+try:
+    from termcolor import colored
+except ImportError:
+    from modules._vendor_termcolor import colored
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

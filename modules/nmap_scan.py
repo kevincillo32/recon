@@ -2,8 +2,14 @@
 """Módulo de escaneo con Nmap: discovery, TCP full, targeted, UDP, OS, NSE."""
 
 import re
-import pyperclip
-from termcolor import colored
+try:
+    import pyperclip
+except ImportError:
+    from modules import _vendor_pyperclip as pyperclip
+try:
+    from termcolor import colored
+except ImportError:
+    from modules._vendor_termcolor import colored
 
 from modules.utils import run_command
 
@@ -17,12 +23,12 @@ def host_discovery(ip, folder):
     print(colored(f"[+] Host discovery guardado en {output}", "green"))
 
 
-def escanear_puertos_tcp(ip, folder):
+def escanear_puertos_tcp(ip, folder, min_rate="5000"):
     output = folder / "03_nmap" / "allPortsTCP"
     xml = folder / "03_nmap" / "allPortsTCP.xml"
 
     run_command([
-        "nmap", "-p-", "--open", "-sS", "--min-rate", "5000",
+        "nmap", "-p-", "--open", "-sS", "--min-rate", str(min_rate),
         "-vvv", "-n", "-Pn", ip, "-oG", str(output), "-oX", str(xml)
     ])
 
