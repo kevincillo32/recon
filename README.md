@@ -78,7 +78,6 @@ python3 pattern_analysis.py
 # Actualizar templates de nuclei y verificar wordlists configuradas
 python3 update_resources.py
 
-# Instalación como paquete pip (nunca probado end-to-end en este entorno)
 pip install . --break-system-packages
 ```
 
